@@ -56,7 +56,7 @@ func run(watermarkFile, outputFile string) error {
 	modifiedWatermarkPath := filepath.Join(currentDir, "modified_watermark.pdf")
 
 	log.Println("Starting content stream modification.")
-	if err := modifyContentStream(watermarkPath, modifiedWatermarkPath); err != nil {
+	if err := modifyContentStream(watermarkPath, outputFile); err != nil {
 		return fmt.Errorf("error modifying watermark PDF: %v", err)
 	}
 	log.Println("Content stream modification completed.")
