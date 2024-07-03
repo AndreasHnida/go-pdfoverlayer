@@ -61,7 +61,7 @@ func run(watermarkFile, outputFile string) error {
 	}
 	log.Println("Content stream modification completed.")
 
-	wm, err := api.PDFWatermark(modifiedWatermarkPath, WATERMARK_CONFIG, true, false, types.POINTS)
+	wm, err := api.PDFWatermark(outputFile, WATERMARK_CONFIG, true, false, types.POINTS)
 	if err != nil {
 		return fmt.Errorf("error creating PDF watermark: %v", err)
 	}
