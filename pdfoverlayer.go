@@ -171,13 +171,15 @@ func removeBackground(ctx *model.Context) error {
 
 	whiteRectRegex := regexp.MustCompile(`(/Cs1 cs 1 1 1 sc \d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)? re f\*)`)
 	blackRectRegex := regexp.MustCompile(`(\d+\.\d+\s+){3}(97\.\d+|0\.7\d*)\s+re\s+f\*`)
+	imageRegex := regexp.MustCompile(`/Im\d+\s+Do`)
 
 	if matches := whiteRectRegex.FindAllString(contentString, -1); len(matches) == 0 {
-		return fmt.Errorf("no white rectangles found")
+		return fmt.Errorf("no white background found")
 	}
 
 	modifiedContent := removeMatches(contentString, whiteRectRegex)
 	modifiedContent = removeMatches(modifiedContent, blackRectRegex)
+	modifiedContent = removeMatches(modifiedContent, imageRegex)
 
 	streamDict.Content = []byte(modifiedContent)
 	if err := streamDict.Encode(); err != nil {
