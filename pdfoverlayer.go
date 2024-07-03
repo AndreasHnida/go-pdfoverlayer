@@ -174,7 +174,7 @@ func removeBackground(ctx *model.Context) error {
 	imageRegex := regexp.MustCompile(`/Im\d+\s+Do`)
 
 	if matches := whiteRectRegex.FindAllString(contentString, -1); len(matches) == 0 {
-		return fmt.Errorf("no white background found")
+		fmt.Printf("no white background found")
 	}
 
 	modifiedContent := removeMatches(contentString, whiteRectRegex)
