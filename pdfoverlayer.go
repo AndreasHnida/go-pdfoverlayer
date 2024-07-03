@@ -53,15 +53,15 @@ func run(watermarkFile, outputFile string) error {
 	}
 
 	watermarkPath := filepath.Join(currentDir, watermarkFile)
-	//	modifiedWatermarkPath := filepath.Join(currentDir, "modified_watermark.pdf")
+	modifiedWatermarkPath := filepath.Join(os.TempDir(), "modified_watermark.pdf")
 
 	log.Println("Starting content stream modification.")
-	if err := modifyContentStream(watermarkPath, outputFile); err != nil {
+	if err := modifyContentStream(watermarkPath, modifiedWatermarkPath); err != nil {
 		return fmt.Errorf("error modifying watermark PDF: %v", err)
 	}
 	log.Println("Content stream modification completed.")
 
-	wm, err := api.PDFWatermark(outputFile, WATERMARK_CONFIG, true, false, types.POINTS)
+	wm, err := api.PDFWatermark(modifiedWatermarkPath, WATERMARK_CONFIG, true, false, types.POINTS)
 	if err != nil {
 		return fmt.Errorf("error creating PDF watermark: %v", err)
 	}
