@@ -53,7 +53,7 @@ func run(watermarkFile, outputFile string) error {
 	}
 
 	watermarkPath := filepath.Join(currentDir, watermarkFile)
-	modifiedWatermarkPath := filepath.Join(currentDir, "modified_watermark.pdf")
+	//	modifiedWatermarkPath := filepath.Join(currentDir, "modified_watermark.pdf")
 
 	log.Println("Starting content stream modification.")
 	if err := modifyContentStream(watermarkPath, outputFile); err != nil {
