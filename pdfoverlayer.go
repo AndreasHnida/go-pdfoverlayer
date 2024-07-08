@@ -18,6 +18,7 @@ import (
 
 //go:embed assets/background.pdf
 var backgroundPDF embed.FS
+var verbose bool
 
 const (
 	DEFAULT_OUTPUT_FILE = "watermarked_output.pdf"
@@ -26,10 +27,31 @@ const (
 	BOTTOM_CROP_POINTS  = 5.0 * 28.3465 // 5cm in points
 )
 
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+func logln(msg string) {
+	if verbose {
+		fmt.Println(msg)
+	}
+}
+
+func logf(format string, args ...interface{}) {
+	if verbose {
+		fmt.Printf(format+"\n", args)
+	}
+}
+
 func main() {
+	verbosePtr := flag.Bool("verbose", false, "Enable debug output.")
 	watermarkFile := flag.String("watermark", "", "The PDF file to use as a watermark.")
 	outputFile := flag.String("output", DEFAULT_OUTPUT_FILE, "The output PDF file name.")
 	flag.Parse()
+
+	verbose = *verbosePtr
 
 	if err := run(*watermarkFile, *outputFile); err != nil {
 		log.Fatalf("Error: %v", err)
@@ -70,7 +92,7 @@ func run(watermarkFile, outputFile string) error {
 		return fmt.Errorf("error applying watermark: %v", err)
 	}
 
-	log.Printf("Successfully created watermarked PDF: %s\n", outputFile)
+	logf("Successfully created watermarked PDF: %s\n", outputFile)
 	return nil
 }
 
@@ -110,7 +132,7 @@ func modifyContentStream(inputPath, outputPath string) error {
 		return fmt.Errorf("error removing background: %v", err)
 	}
 
-	if err := cropBottom(ctx); err != nil {
+	if err := cropBottomAndLeft(ctx); err != nil {
 		return fmt.Errorf("error cropping bottom: %v", err)
 	}
 
@@ -122,7 +144,7 @@ func modifyContentStream(inputPath, outputPath string) error {
 	return nil
 }
 
-func cropBottom(ctx *model.Context) error {
+func cropBottomAndLeft(ctx *model.Context) error {
 	pageDict, _, _, err := ctx.PageDict(1, false)
 	if err != nil {
 		return fmt.Errorf("error getting page dictionary for page 1: %v", err)
@@ -132,9 +154,20 @@ func cropBottom(ctx *model.Context) error {
 	if mediaBoxArray == nil || len(mediaBoxArray) != 4 {
 		return fmt.Errorf("error: MediaBox not found or invalid for page 1")
 	}
+
+	// Crop 2cm from the left
+	if mediaBoxArray[0], err = adjustCoordinate(mediaBoxArray[0], 56.7); err != nil {
+		return fmt.Errorf("error adjusting MediaBox for page 1: %v", err)
+	}
+	if mediaBoxArray[2], err = adjustCoordinate(mediaBoxArray[2], -56.7); err != nil {
+		return fmt.Errorf("error adjusting MediaBox for page 1: %v", err)
+	}
+
+	// Crop from the bottom
 	if mediaBoxArray[1], err = adjustCoordinate(mediaBoxArray[1], BOTTOM_CROP_POINTS); err != nil {
 		return fmt.Errorf("error adjusting MediaBox for page 1: %v", err)
 	}
+
 	pageDict.Update("MediaBox", mediaBoxArray)
 
 	return nil
@@ -168,16 +201,22 @@ func removeBackground(ctx *model.Context) error {
 	}
 
 	contentString := strings.ReplaceAll(string(streamDict.Content), "\n", " ")
+	logln(contentString)
 
 	whiteRectRegex := regexp.MustCompile(`(/Cs1 cs 1 1 1 sc \d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)? re f\*)`)
-	blackRectRegex := regexp.MustCompile(`(\d+\.\d+\s+){3}(97\.\d+|0\.7\d*)\s+re\s+f\*`)
+	whiteRectRegex2 := regexp.MustCompile(`\b1\s+1\s+1\s+rg\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+m\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+h\s+f\*`)
+	blackRectRegex := regexp.MustCompile(`(\d+\.\d+\s+){3}(9\.\d+|0\.8\d*)\s+re\s+f\*`)
 	imageRegex := regexp.MustCompile(`/Im\d+\s+Do`)
 
 	if matches := whiteRectRegex.FindAllString(contentString, -1); len(matches) == 0 {
-		fmt.Printf("no white background found")
+		fmt.Println("no white background found")
+	}
+	if matches := whiteRectRegex2.FindAllString(contentString, -1); len(matches) == 0 {
+		fmt.Println("no white background found with the new method either")
 	}
 
 	modifiedContent := removeMatches(contentString, whiteRectRegex)
+	modifiedContent = removeMatches(modifiedContent, whiteRectRegex2)
 	modifiedContent = removeMatches(modifiedContent, blackRectRegex)
 	modifiedContent = removeMatches(modifiedContent, imageRegex)
 
