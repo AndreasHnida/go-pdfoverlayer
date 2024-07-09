@@ -46,7 +46,7 @@ func logf(format string, args ...interface{}) {
 }
 
 func main() {
-	verbosePtr := flag.Bool("verbose", false, "Enable debug output.")
+	verbosePtr := flag.Bool("v", false, "Enable debug output.")
 	watermarkFile := flag.String("watermark", "", "The PDF file to use as a watermark.")
 	outputFile := flag.String("output", DEFAULT_OUTPUT_FILE, "The output PDF file name.")
 	flag.Parse()
@@ -77,11 +77,11 @@ func run(watermarkFile, outputFile string) error {
 	watermarkPath := filepath.Join(currentDir, watermarkFile)
 	modifiedWatermarkPath := filepath.Join(os.TempDir(), "modified_watermark.pdf")
 
-	log.Println("Starting content stream modification.")
+	logln("Starting content stream modification.")
 	if err := modifyContentStream(watermarkPath, modifiedWatermarkPath); err != nil {
 		return fmt.Errorf("error modifying watermark PDF: %v", err)
 	}
-	log.Println("Content stream modification completed.")
+	logln("Content stream modification completed.")
 
 	wm, err := api.PDFWatermark(modifiedWatermarkPath, WATERMARK_CONFIG, true, false, types.POINTS)
 	if err != nil {
@@ -118,7 +118,7 @@ func createTempFile() (*os.File, error) {
 }
 
 func modifyContentStream(inputPath, outputPath string) error {
-	log.Printf("Reading PDF context from: %s", inputPath)
+	logf("Reading PDF context from: %s", inputPath)
 	ctx, err := api.ReadContextFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("error reading PDF context: %v", err)
@@ -140,7 +140,7 @@ func modifyContentStream(inputPath, outputPath string) error {
 		return fmt.Errorf("error writing modified PDF: %v", err)
 	}
 
-	log.Println("Successfully written to output.pdf")
+	logln("Successfully written to output.pdf")
 	return nil
 }
 
@@ -209,10 +209,10 @@ func removeBackground(ctx *model.Context) error {
 	imageRegex := regexp.MustCompile(`/Im\d+\s+Do`)
 
 	if matches := whiteRectRegex.FindAllString(contentString, -1); len(matches) == 0 {
-		fmt.Println("no white background found")
+		logln("no white background found")
 	}
 	if matches := whiteRectRegex2.FindAllString(contentString, -1); len(matches) == 0 {
-		fmt.Println("no white background found with the new method either")
+		logln("no white background found with the new method either")
 	}
 
 	modifiedContent := removeMatches(contentString, whiteRectRegex)
@@ -231,7 +231,7 @@ func removeBackground(ctx *model.Context) error {
 	}
 
 	pageDict.Update("Contents", *sdRef)
-	log.Println("Updated content stream in page dictionary.")
+	logln("Updated content stream in page dictionary.")
 	return nil
 }
 
