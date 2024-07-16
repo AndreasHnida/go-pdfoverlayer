@@ -4,7 +4,6 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -68,6 +67,12 @@ func run(watermarkFile, outputFile string) error {
 		return err
 	}
 	defer os.Remove(tempFile.Name())
+	// create a background file for having a plane white background
+	whiteBgFile, err := createTempFile()
+	if err != nil {
+		return err
+	}
+	defer os.Remove(whiteBgFile.Name())
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -102,7 +107,7 @@ func createTempFile() (*os.File, error) {
 		return nil, fmt.Errorf("error reading embedded background PDF: %v", err)
 	}
 
-	tempFile, err := ioutil.TempFile("", "background-*.pdf")
+	tempFile, err := os.CreateTemp("", "background-*.pdf")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temporary file: %v", err)
 	}
@@ -205,8 +210,8 @@ func removeBackground(ctx *model.Context) error {
 
 	whiteRectRegex := regexp.MustCompile(`(/Cs1 cs 1 1 1 sc \d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)? re f\*)`)
 	whiteRectRegex2 := regexp.MustCompile(`\b1\s+1\s+1\s+rg\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+m\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+\d+(\.\d+)?\s+\d+(\.\d+)?\s+l\s+h\s+f\*`)
-	blackRectRegex := regexp.MustCompile(`(\d+\.\d+\s+){3}(9\.\d+|0\.8\d*)\s+re\s+f\*`)
-	imageRegex := regexp.MustCompile(`/Im\d+\s+Do`)
+	//blackRectRegex := regexp.MustCompile(`(\d+\.\d+\s+){3}(9\.\d+|0\.8\d*)\s+re\s+f\*`)
+	// imageRegex := regexp.MustCompile(`/Im\d+\s+Do`)
 
 	if matches := whiteRectRegex.FindAllString(contentString, -1); len(matches) == 0 {
 		logln("no white background found")
@@ -217,8 +222,8 @@ func removeBackground(ctx *model.Context) error {
 
 	modifiedContent := removeMatches(contentString, whiteRectRegex)
 	modifiedContent = removeMatches(modifiedContent, whiteRectRegex2)
-	modifiedContent = removeMatches(modifiedContent, blackRectRegex)
-	modifiedContent = removeMatches(modifiedContent, imageRegex)
+	//modifiedContent = removeMatches(modifiedContent, blackRectRegex)
+	// modifiedContent = removeMatches(modifiedContent, imageRegex)
 
 	streamDict.Content = []byte(modifiedContent)
 	if err := streamDict.Encode(); err != nil {
